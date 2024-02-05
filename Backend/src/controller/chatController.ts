@@ -7,8 +7,10 @@ export const processUserQuery = async(req: Request,res: Response)=>{
     console.log(message);
 
     const response = await axios.post('http://127.0.0.1:5000/process',{
-        message: message
+        query: message
     })
 
-    res.status(200).json(response.data);
+    console.log(response.data['data'])
+
+    res.status(200).json({"outputMessage" : response.data['data']});
 }
