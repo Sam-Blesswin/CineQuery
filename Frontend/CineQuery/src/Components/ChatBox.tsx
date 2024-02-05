@@ -4,15 +4,35 @@ import OutputBox from "./OutputBox";
 
 const ChatBox = () => {
   const [outputMessage, setOutputMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSend = (data: string) => {
-    setOutputMessage(data); // Update the state with the response data
+    setOutputMessage(data);
+    setErrorMessage("");
+  };
+
+  const handleSendError = (error: string) => {
+    setErrorMessage(error);
+    setOutputMessage("");
+  };
+
+  const handleLoading = (isLoading: boolean) => {
+    setIsLoading(isLoading);
   };
 
   return (
     <div>
-      <InputBox onSend={handleSend}></InputBox>
-      <OutputBox outputMessage={outputMessage}></OutputBox>
+      <InputBox
+        onSend={handleSend}
+        onSendError={handleSendError}
+        onSendRequest={handleLoading}
+      ></InputBox>
+      <OutputBox
+        outputMessage={outputMessage}
+        errorMessage={errorMessage}
+        isLoading={isLoading}
+      ></OutputBox>
     </div>
   );
 };

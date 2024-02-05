@@ -20,9 +20,14 @@ app = Flask(__name__)
 
 @app.route('/process', methods=['POST'])
 def process_request():
+    if not openai_api_key or not tmdb_api_token:
+        return jsonify({"error": "Missing API keys"}), 500
+    
     user_query = request.json['query']
+    if not user_query:
+        return jsonify({"error": "No query provided"}), 400
 
-    # #LLM code
+    #schema
     schema = {
         "properties": {
             "movie": {"type": "string"},
@@ -30,21 +35,31 @@ def process_request():
         },
     }
 
+    #LLM code
     llm = ChatOpenAI(openai_api_key = openai_api_key, temperature=0, model="gpt-3.5-turbo")
-
-    #schema
     chain = create_extraction_chain(schema, llm)
-    data = chain.run(user_query)
+
+    try:
+        data = chain.invoke(user_query)
+    except Exception as e:
+        return jsonify({"error": "Failed to process the query"}), 500
 
     print(data)
-    
-    url=""
 
-    #hit tmdb api
-    if('movie' in data[0]):
-        url = f"https://api.themoviedb.org/3/search/movie?query={data[0]['movie']}&include_adult=false&language=en-US&page=1"
-    if('year' in data[0]):
-        url = url+"&year={year}"
+    if not data['text']:
+        return jsonify({"error": "Requested information not available"}), 400
+    
+    extracted_data = data['text'][0]
+
+    url = "https://api.themoviedb.org/3/search/movie?"
+
+    if 'movie' in extracted_data and extracted_data['movie']:
+        movie_title = extracted_data['movie']
+        url += f"query={movie_title}&include_adult=false&language=en-US&page=1"
+
+    if 'year' in extracted_data and extracted_data['year']:
+        movie_year = extracted_data['year']
+        url += f"&year={movie_year}"
 
     print(url)
 
@@ -53,24 +68,27 @@ def process_request():
         "Authorization": f"Bearer {tmdb_api_token}"
     }
 
-    response = requests.get(url, headers=headers)
+    try:
+        response = requests.get(url, headers=headers)
+        info = response.text
+    except requests.RequestException as e:
+        return jsonify({"error": "Failed to fetch movie information"}), 500
 
-    info = response.text
+    print(info)
 
-    # Assuming you have a function to generate a response using LangChain
+    #generate user response
     def generate_langchain_response(user_query, info):
         prompt = f"User asked: {user_query}\n\nMovie Information: {info}\n\nResponse: "
         response = llm.invoke(prompt) 
-        return response
+        return response.content if response else "Error generating response"
 
-    # Generate a response
     langchain_response = generate_langchain_response(user_query, info)
 
-    final_response = {"data": langchain_response.content}
+    final_response = {"data": langchain_response}
 
     return jsonify(final_response)
 
-app.run(port=5000)
+app.run(port=5000, debug=True)
 
 
 

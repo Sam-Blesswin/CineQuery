@@ -3,28 +3,45 @@ import { useState } from "react";
 
 type InputBoxProps = {
   onSend: (message: string) => void;
+  onSendError: (message: string) => void;
+  onSendRequest: (status: boolean) => void;
 };
 
 const InputBox = (props: InputBoxProps) => {
   const [message, setMessage] = useState("");
 
   const sendHandler = async () => {
-    props.onSend("");
+    try {
+      props.onSendRequest(true);
 
-    const response = await axios.post("http://127.0.0.1:3000/api/v1/chat/", {
-      message,
-    });
+      const response = await axios.post("http://127.0.0.1:3000/api/v1/chat/", {
+        message,
+      });
 
-    console.log(response.data);
+      if (response.status === 200) {
+        console.log(response.data);
+        props.onSend(response.data["outputMessage"]);
+      }
+    } catch (error: unknown) {
+      console.error("Error occurred during the API call:", error);
 
-    props.onSend(response.data["outputMessage"]);
+      if (!error.response) {
+        props.onSendError("Cannot reach server! Please try again later");
+      } else {
+        const serverMessage =
+          error.response.data["error"] || "Something went wrong on the server.";
+        props.onSendError(`${serverMessage}`);
+      }
+    } finally {
+        props.onSendRequest(false);
+    }
   };
 
   return (
     <div className="flex justify-center p-4">
       <div className="w-1/2 flex">
         <input
-          className="w-full p-2 border-2 border-white rounded-l-lg text-white bg-black placeholder-gray-400"
+          className="w-full p-2 border-2 border-yellow-500 rounded-l-lg text-white bg-black placeholder-gray-400"
           placeholder="Ask me about any movie"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
