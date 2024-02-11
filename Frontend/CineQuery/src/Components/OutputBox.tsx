@@ -9,7 +9,19 @@ const OutputBox = (props: OutputBoxProps) => {
 
   if (props.isLoading) {
     messageDiv = (
-      <h1 className="text-white whitespace-pre-wrap text-center">Loading...</h1>
+      <div className="text-center">
+        <div className="flex justify-center items-center h-24">
+          <div className="w-5 h-5 bg-yellow-400 rounded-full mx-1 animate-pulse"></div>
+          <div
+            className="w-5 h-5 bg-yellow-400 rounded-full mx-1 animate-pulse"
+            style={{ animationDelay: "0.2s" }}
+          ></div>
+          <div
+            className="w-5 h-5 bg-yellow-400 rounded-full mx-1 animate-pulse"
+            style={{ animationDelay: "0.4s" }}
+          ></div>
+        </div>
+      </div>
     );
   } else if (props.errorMessage != "") {
     messageDiv = (

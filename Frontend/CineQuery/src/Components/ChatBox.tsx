@@ -1,6 +1,7 @@
 import { useState } from "react";
 import InputBox from "./InputBox";
 import OutputBox from "./OutputBox";
+import InfoBox from "./InfoBox";
 
 const ChatBox = () => {
   const [outputMessage, setOutputMessage] = useState("");
@@ -23,6 +24,7 @@ const ChatBox = () => {
 
   return (
     <div>
+      <InfoBox></InfoBox>
       <InputBox
         onSend={handleSend}
         onSendError={handleSendError}
