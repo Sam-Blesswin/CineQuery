@@ -33,7 +33,7 @@ const InputBox = (props: InputBoxProps) => {
         props.onSendError(`${serverMessage}`);
       }
     } finally {
-        props.onSendRequest(false);
+      props.onSendRequest(false);
     }
   };
 
@@ -42,7 +42,7 @@ const InputBox = (props: InputBoxProps) => {
       <div className="w-1/2 flex">
         <input
           className="w-full p-2 border-2 border-yellow-500 rounded-l-lg text-white bg-black placeholder-gray-400"
-          placeholder="Ask me about any movie"
+          placeholder="Ask me about any movie or series"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
         ></input>
