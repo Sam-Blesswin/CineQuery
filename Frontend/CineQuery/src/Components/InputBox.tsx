@@ -9,10 +9,9 @@ type InputBoxProps = {
 
 const InputBox = (props: InputBoxProps) => {
   const [message, setMessage] = useState("");
-  const [lastSentMessage, setLastSentMessage] = useState("");
 
   const sendHandler = async () => {
-    if (message.trim() === "" || message === lastSentMessage) {
+    if (message.trim() === "") {
       return;
     }
 
@@ -26,7 +25,6 @@ const InputBox = (props: InputBoxProps) => {
       if (response.status === 200) {
         console.log(response.data);
         props.onSend(response.data["outputMessage"]);
-        setLastSentMessage(message);
       }
     } catch (error: unknown) {
       console.error("Error occurred during the API call:", error);

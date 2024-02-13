@@ -18,6 +18,12 @@ const InfoBox = () => {
             "What are some interesting facts about 'Stranger Things' TV show?"
           </li>
           <li>"Provide insights on Leonardo DiCaprio's acting career."</li>
+          <li>
+            "Can you recommend around 5 top-rated comedy movies from the 2020?"
+          </li>
+          <li>
+            "What are the most awarded films directed by Christopher Nolan?"
+          </li>
         </ul>
       </div>
     </div>

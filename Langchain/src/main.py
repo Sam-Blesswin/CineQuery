@@ -20,6 +20,11 @@ app = Flask(__name__)
 movie_genreList = {
     'Action': 28,
   'Adventure': 12,
+    'Mystery': 9648,
+  'Romance': 10749,
+  'Science Fiction': 878,
+  'Thriller': 53,
+  'War': 10752,
   'Animation': 16,
   'Comedy': 35,
   'Crime': 80,
@@ -30,11 +35,6 @@ movie_genreList = {
   'History': 36,
   'Horror': 27,
   'Music': 10402,
-  'Mystery': 9648,
-  'Romance': 10749,
-  'Science Fiction': 878,
-  'Thriller': 53,
-  'War': 10752,
   'Western': 37
   }
 
@@ -57,6 +57,8 @@ tvshow_genreList = {
   'Western': 37
   }
 
+ratingQueryList = ['vote_average.gte','vote_average.lte']
+
 
 @app.route('/process', methods=['POST'])
 def process_request():
@@ -77,13 +79,11 @@ def process_request():
             "trending_movie": {"type": "string"},
             "trending_tvshow": {"type": "string"},
             "trending_person": {"type": "string"},
-            "top_rated_movie": {"type": "string"},
-            "top_rated_tvshow": {"type": "string"},
             "popular_person": {"type": "string"},
             "genre": {"type": "string"},
             "year" : {"type" : "string"},
-            "movie_or_tvshow": {"type": "string"},
             "rating" : {"type" : "string"},
+            "movie_or_tvshow" : {"type" : "string"}
         },
     }
 
@@ -95,10 +95,9 @@ def process_request():
             extracted_data = data['text'][0] if isinstance(data['text'], list) else data['text']
             print(extracted_data)
 
-            for key in ['general_title', 'movie_title', 'tvshow_title', 'person_name', 
-                        'top_rated_movie', 'top_rated_tvshow', 'popular_person',
+            for key in ['general_title', 'movie_title', 'tvshow_title', 'person_name', 'popular_person',
                         'trending_movie','trending_tvshow','trending_person',
-                        'year','movie_or_tvshow','genre','rating']:
+                        'year','genre','rating','movie_or_tvshow']:
                 
                 if key in extracted_data and extracted_data[key]:
                     standardized_data[key] = extracted_data[key]
@@ -121,8 +120,7 @@ def process_request():
         return jsonify({"error": "Failed to process the query"}), 500
     
     def urlBuilder():
-        url="https://api.themoviedb.org/3/discover/movie?language=en-US&page=1"
-
+        url=""
         if 'general_title' in standardized_data and standardized_data['general_title']:
             url = "https://api.themoviedb.org/3/search/multi?"
             title = standardized_data['general_title']
@@ -151,48 +149,109 @@ def process_request():
             url = "https://api.themoviedb.org/3/trending/tv/week?language=en-US"
         elif 'trending_person' in standardized_data and standardized_data['trending_person']:
             url = "https://api.themoviedb.org/3/trending/person/week?language=en-US"
-        elif 'top_rated_movie' in standardized_data and standardized_data['top_rated_movie']:
-            url = "https://api.themoviedb.org/3/movie/top_rated?language=en-US"
-        elif 'top_rated_tvshow' in standardized_data and standardized_data['top_rated_tvshow']:
-            url = "https://api.themoviedb.org/3/tv/top_rated?language=en-US"
         elif 'popular_person' in standardized_data and standardized_data['popular_person']:
             url = "https://api.themoviedb.org/3/person/popular?language=en-US"
-        elif 'movie_or_tvshow' in standardized_data and standardized_data['movie_or_tvshow']:
-            if standardized_data['movie_or_tvshow'] == "movie":
-                url = "https://api.themoviedb.org/3/discover/movie?language=en-US&page=1"
+        elif 'movie_or_tvshow' in standardized_data \
+            and standardized_data['movie_or_tvshow'].replace(" ","").replace("-", "").strip() == "tvshow" \
+            or standardized_data['movie_or_tvshow'].replace(" ","").replace("-", "").strip() == "tvseries":
 
-                if 'genre' in standardized_data and standardized_data['genre']:
-                    genre_prompt = f"Match the user's genre description '{standardized_data['genre']}' with the closest genre from this list: {movie_genreList}"
-                    try:
-                        model_response = llm.invoke(genre_prompt)
-                        print(model_response.content)
-                        matched_genre = model_response.content.strip()
-                        genre_id = movie_genreList.get(matched_genre)
-                    except Exception as e:
-                        return jsonify({"error": "Error generating response"}), 500
-
-                    if genre_id:
-                        url += f"&with_genres={genre_id}"
-                    if 'year' in standardized_data and standardized_data['year']:
-                        url += f"&year={standardized_data['year']}"
-            else:
-                url = "https://api.themoviedb.org/3/discover/tv?language=en-US&page=1"
+            url = "https://api.themoviedb.org/3/discover/tv?language=en-US&page=1&sort_by=popularity.desc"
             
-                if 'genre' in standardized_data and standardized_data['genre']:
-                    genre_prompt = f"Match the user's genre description '{standardized_data['genre']}' with the closest genre from this list: {tvshow_genreList}"
+            if 'year' in standardized_data and standardized_data['year']:
+                    url += f"&year={standardized_data['year']}"
+
+            prompt=""
+            if 'genre' in standardized_data and standardized_data['genre']:
+                   prompt += f"Match the user's genre description '{standardized_data['genre']}' with the closest genre from this list: {tvshow_genreList}"
+
+            if 'rating' in standardized_data and standardized_data['rating']:
+                    prompt += f"Match the user's rating query '{standardized_data['rating']}' with the closest rating query from this list: {ratingQueryList} and rating value"
+
+            if prompt:
                     try:
-                        model_response = llm.invoke(genre_prompt)
+                        model_response = llm.invoke(prompt)
                         print(model_response.content)
-                        matched_genre = model_response.content.strip()
-                        genre_id = tvshow_genreList.get(matched_genre)
+
+                        lines = model_response.content.strip().split('\n')
+
+                        extracted_values = {}
+
+                        for line in lines:
+                            if not line.strip():
+                                continue 
+                            key, value = line.split(':')
+                            if key.lower().strip().startswith("closest"):
+                                key = key.lower().replace(" ", "").strip()[len("closest"):].strip()
+                            else:
+                                key = key.lower().replace(" ", "").strip()
+                            extracted_values[key] = value.replace("'","").strip()
+
+                        print(extracted_values)
+                        
+                        if 'genre' in extracted_values:
+                            genre = extracted_values['genre']
+                            genre_id = tvshow_genreList.get(genre)
+                            url += f"&with_genres={genre_id}"
+                        if 'ratingquery' in extracted_values and extracted_values['ratingquery'] in ratingQueryList:
+                            rating_query = extracted_values['ratingquery']
+                            url += f"&{rating_query}="
+                            if 'ratingvalue' in extracted_values and extracted_values['ratingvalue']!='None':
+                                url += extracted_values['ratingvalue']
+                            else:
+                                 url+= '5'
+
                     except Exception as e:
-                        return jsonify({"error": "Error generating response"}), 500
+                        print(e)
+        else:
+            url = "https://api.themoviedb.org/3/discover/movie?language=en-US&page=1&sort_by=popularity.desc"
 
-                    if genre_id:
-                        url += f"&with_genres={genre_id}"
-                    if 'year' in standardized_data and standardized_data['year']:
-                        url += f"&year={standardized_data['year']}"
 
+            if 'year' in standardized_data and standardized_data['year']:
+                    url += f"&year={standardized_data['year']}"
+
+            prompt=""
+            if 'genre' in standardized_data and standardized_data['genre']:
+                   prompt += f"Match the user's genre description '{standardized_data['genre']}' with the closest genre from this list: {movie_genreList}"
+
+            if 'rating' in standardized_data and standardized_data['rating']:
+                    prompt += f"Match the user's rating query '{standardized_data['rating']}' with the closest rating query from this list: {ratingQueryList} and rating value"
+
+            if prompt:
+                    try:
+                        model_response = llm.invoke(prompt)
+                        print(model_response.content)
+
+                        lines = model_response.content.strip().split('\n')
+
+                        extracted_values = {}
+
+                        for line in lines:
+                            if not line.strip():
+                                continue 
+                            key, value = line.split(':')
+                            if key.lower().strip().startswith("closest"):
+                                key = key.lower().replace(" ", "").strip()[len("closest"):].strip()
+                            else:
+                                key = key.lower().replace(" ", "").strip()
+                            extracted_values[key] = value.replace("'","").strip()
+
+                        print(extracted_values)
+                        
+                        if 'genre' in extracted_values:
+                            genre = extracted_values['genre']
+                            genre_id = movie_genreList.get(genre)
+                            url += f"&with_genres={genre_id}"
+                        if 'ratingquery' in extracted_values and extracted_values['ratingquery'] in ratingQueryList:
+                            rating_query = extracted_values['ratingquery']
+                            url += f"&{rating_query}="
+                            if 'ratingvalue' in extracted_values and extracted_values['ratingvalue']!='None':
+                                url += extracted_values['ratingvalue']
+                            else:
+                                 url+= '5'
+
+                    except Exception as e:
+                        print(e)
+                
         return url
     
     url = urlBuilder()
@@ -237,9 +296,8 @@ def process_request():
             UserQuery on Movies and TV Shows: {user_query} 
             Available Information: {info} 
             Response Criteria: 
-            - Prioritize information from the 'Available Information'. 
-            - If the 'Available Information' seems inadequate, use your internal knowledge about movies and TV shows.
-            - Exclude any URLs from the response.
+            - Prioritize information from the 'Available Information' and also use your internal knowledge about movies and TV shows.
+            - Exclude Image URL and anyother URLs and  from the response.
             Response:
             """
 
@@ -251,7 +309,6 @@ def process_request():
             return ""
 
     langchain_response = generate_langchain_response(user_query, info)
-
     langchain_response += "\n\n Disclaimer: All the information provided are from TMDB database and ChatGPT3.5."
 
     final_response = {"data": langchain_response}
@@ -259,6 +316,3 @@ def process_request():
     return jsonify(final_response)
 
 app.run(port=5000, debug=True)
-
-
-
