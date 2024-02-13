@@ -7,6 +7,14 @@ type InputBoxProps = {
   onSendRequest: (status: boolean) => void;
 };
 
+interface ErrorResponse {
+  response: {
+    data: {
+      error: string;
+    };
+  };
+}
+
 const InputBox = (props: InputBoxProps) => {
   const [message, setMessage] = useState("");
 
@@ -26,15 +34,17 @@ const InputBox = (props: InputBoxProps) => {
         console.log(response.data);
         props.onSend(response.data["outputMessage"]);
       }
-    } catch (error: unknown) {
-      console.error("Error occurred during the API call:", error);
+    } catch (err: unknown) {
+      console.error("Error occurred during the API call:", err);
 
-      if (!error.response) {
-        props.onSendError("Cannot reach server! Please try again later");
-      } else {
+      if (err instanceof Error && "response" in err) {
+        const errorResponse = err as ErrorResponse;
         const serverMessage =
-          error.response.data["error"] || "Something went wrong on the server.";
+          errorResponse.response.data["error"] ||
+          "Something went wrong on the server.";
         props.onSendError(`${serverMessage}`);
+      } else {
+        props.onSendError("Cannot reach server! Please try again later");
       }
     } finally {
       props.onSendRequest(false);
