@@ -1,4 +1,9 @@
-# README.md for Cine Query
+# Cine Query Website
+
+## Website URL
+
+The website is hosted at [Cine Query](https://cine-query.vercel.app/)
+
 
 ## Introduction
 
