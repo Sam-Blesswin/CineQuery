@@ -26,8 +26,8 @@ const InputBox = (props: InputBoxProps) => {
     try {
       props.onSendRequest(true);
 
-      const response = await axios.post("http://127.0.0.1:3000/api/v1/chat/", {
-        message,
+      const response = await axios.post("http://127.0.0.1:5000/process", {
+        query: message,
       });
 
       if (response.status === 200) {
