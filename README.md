@@ -7,7 +7,7 @@ The website is hosted at [Cine Query](https://cine-query.vercel.app/)
 
 ## Introduction
 
-Cine Query is a chat application designed to provide users with detailed information about movies and series. It leverages the capabilities of LangChain and OpenAI's GPT-3.5 LLM to parse user queries and fetch relevant data from The Movie Database (TMDb). The backend is built using Node.js and Express with TypeScript, while the frontend is developed using React with TypeScript and styled using Tailwind CSS.
+Cine Query is a chat application designed to provide users with detailed information about movies and series. It leverages the capabilities of LangChain and OpenAI's GPT-3.5 LLM to parse user queries and fetch relevant data from The Movie Database (TMDb). The backend is built using Flask and Python, while the frontend is developed using React with TypeScript and styled using Tailwind CSS.
 
 ## Backend Setup (Node.js and Flask)
 
