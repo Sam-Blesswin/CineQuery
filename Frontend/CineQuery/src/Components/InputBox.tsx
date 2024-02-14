@@ -1,6 +1,9 @@
 import axios from "axios";
 import { useState } from "react";
 
+const apiUrl = import.meta.env.VITE_API_URL;
+console.log("API URL:", apiUrl);
+
 type InputBoxProps = {
   onSend: (message: string) => void;
   onSendError: (message: string) => void;
@@ -26,7 +29,7 @@ const InputBox = (props: InputBoxProps) => {
     try {
       props.onSendRequest(true);
 
-      const response = await axios.post("http://127.0.0.1:5000/process", {
+      const response = await axios.post(`${apiUrl}/process`, {
         query: message,
       });
 
