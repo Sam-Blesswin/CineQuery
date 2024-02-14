@@ -2,6 +2,8 @@
 from dotenv import load_dotenv
 
 from flask import Flask, request, jsonify
+from flask_cors import CORS
+
 import requests
 
 from langchain.chains import create_extraction_chain
@@ -15,6 +17,8 @@ openai_api_key = os.getenv('OPENAI_API_KEY')
 tmdb_api_token = os.getenv('TMDB_API_TOKEN')
 
 app = Flask(__name__)
+
+CORS(app)
 
 #specific to TMDB 
 movie_genre_uniqueCode_List = {
@@ -68,6 +72,8 @@ def process_request():
     user_query = request.json['query']
     if not user_query:
         return jsonify({"error": "No query provided"}), 400
+    
+    print(user_query)
 
     #schema
     schema = {
@@ -110,9 +116,6 @@ def process_request():
         data = chain.invoke(user_query)
         standardized_data = process_data(data)
 
-        if not standardized_data:
-            return jsonify({"error": "Requested information not available"}), 400
-
         print(standardized_data)
     except Exception as e:
         print(e)
@@ -135,6 +138,8 @@ def process_request():
         return extracted_values
 
     def urlBuilder():
+        base_url = ""
+
         base_urls = {
             "general": "https://api.themoviedb.org/3/search/multi?",
             "movie": "https://api.themoviedb.org/3/search/movie?",
@@ -164,11 +169,15 @@ def process_request():
             key = next(key for key in ['trending_movie', 'trending_tvshow', 'trending_person', 'popular_person'] if key in standardized_data)
             return base_urls[key] + "language=en-US"
         elif 'movie_or_tvshow' in standardized_data \
-            and standardized_data['movie_or_tvshow'].replace(" ", "").replace("-", "").lower().strip() in ["tvshow", "tvseries"]:
+            and standardized_data['movie_or_tvshow'].replace(" ", "").replace("-", "").lower().strip() in ["tvshow","tvshows", "tvseries"]:
             base_url = base_urls['discover_tvshow']
-        else:
+        elif 'movie_or_tvshow' in standardized_data \
+            and standardized_data['movie_or_tvshow'].replace(" ", "").replace("-", "").lower().strip() in ["movie","movies", "film","films","cinema"]:
             base_url = base_urls['discover_movie']
 
+        if not base_url:
+            return ""
+        
         # Build search URL for titles
         if base_url in [base_urls['general'], base_urls['movie'], base_urls['tvshow'], base_urls['person']]:
             return build_search_url(base_url, title, standardized_data.get('year'))
@@ -222,7 +231,7 @@ def process_request():
             return response.text
         except requests.RequestException as e:
             print(e)
-            return jsonify({"error": "Failed to fetch movie information"}), 500
+            return ""
 
     info = get_data(url)
 
@@ -239,7 +248,6 @@ def process_request():
     
 
     info = truncate_to_token_limit(info)
-
     print(info)
 
     #generate user response
@@ -263,10 +271,12 @@ def process_request():
             return ""
 
     langchain_response = generate_langchain_response(user_query, info)
-    langchain_response += "\n\n Disclaimer: All the information provided are from TMDB database and ChatGPT3.5."
+    if langchain_response:
+        langchain_response += "\n\n Disclaimer: All the information provided are from TMDB database and ChatGPT3.5."
+        final_response = {"data": langchain_response}
+        return jsonify({"outputMessage": final_response['data']}), 200
+    else:
+        return jsonify({"error": "Failed to fetch requested information"}), 500
 
-    final_response = {"data": langchain_response}
-
-    return jsonify(final_response)
-
-app.run(port=5000, debug=True)
+if __name__ == "__main__":
+    app.run(port=5000, debug=True)  # This should only be used for development.
